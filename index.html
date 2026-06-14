@@ -1140,11 +1140,9 @@ h1 span{
       </a>
 
       <div class="contact-box reveal">
-        <div class="contact-kicker">Pago por Yape</div>
-        <div class="contact-name">Lucero Yañez Rojas</div>
-        <div class="contact-yape">Número de Yape:</div>
-        <div class="contact-phone">945 588 069</div>
-      </div>
+  <div class="contact-yape">Número de Yape:</div>
+  <div class="contact-phone">902 306 145</div>
+</div>
 
       <div class="legend reveal">
         <div class="legend-row"><span class="dot d-available"></span> Disponible</div>
@@ -1277,7 +1275,7 @@ h1 span{
     */
 
     const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMlT3AwDUDsM12hy1uep_VNa87Z4vsOhBktPHG_BmzcvW3-LxKtNkg_MS2Hil_X1xFVw/exec';
-    const TICKET_TEMPLATE_SRC = 'boleto-festival-glaciares.jpg';
+    const TICKET_TEMPLATE_SRC = 'ticket.png';
 
     const TOTAL_TICKETS = 350;
     const MIN_REQUIRED = 1;
@@ -1508,8 +1506,8 @@ h1 span{
           pricePerTicket: PRICE_PER_TICKET,
           totalAmount: numbers.length * PRICE_PER_TICKET,
           paymentMethod: 'Yape',
-          yapeNumber: '945588069',
-          yapeHolder: 'Lucero Yañez Rojas',
+          yapeNumber: '902306145',
+yapeHolder: '',
           contactWhatsapp: '902306145',
           drawDate: '2026-07-05',
           drawTime: '15:00',
@@ -1582,10 +1580,10 @@ h1 span{
         const baseName = `${slugify(firstName)}-${slugify(lastName)}-${fileSeed}`;
         pdf.save(`rifa-festival-glaciares-${baseName}.pdf`);
 
-        setStatus(`
-          <strong>Tickets generados correctamente.</strong><br>
-          Realiza el pago por Yape al <strong>945 588 069</strong> y envía tu captura por WhatsApp.
-        `);
+       setStatus(`
+  <strong>Tickets generados correctamente.</strong><br>
+  Realiza el pago por Yape al <strong>902 306 145</strong> y envía tu captura por WhatsApp.
+`);
 
         await fetchReservedNumbers();
       } catch (error) {
@@ -1634,7 +1632,7 @@ h1 span{
       ticketTemplate.onerror = () => {
         setStatus(`
           <strong>Plantilla no encontrada:</strong><br>
-          No se encontró <strong>boleto-festival-glaciares.jpg</strong>. El sistema puede mostrar la grilla, pero debes subir la plantilla final para generar tickets con diseño.
+          No se encontró <strong>ticket.png</strong>. El sistema puede mostrar la grilla, pero debes subir la plantilla final para generar tickets con diseño.
         `);
       };
     });
