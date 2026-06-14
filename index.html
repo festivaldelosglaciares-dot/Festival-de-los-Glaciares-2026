@@ -1281,10 +1281,10 @@ h1 span{
     const MIN_REQUIRED = 1;
     const PRICE_PER_TICKET = 10;
 
-    const NUMBER_X = 724;
-    const NUMBER_Y = 2420;
-    const NUMBER_SIZE = 220;
-    const NUMBER_PREFIX = 'N°';
+    const NUMBER_X = 540;
+const NUMBER_Y = 1319;
+const NUMBER_SIZE = 120;
+    const NUMBER_PREFIX = '';
 
     const firstNameInput = document.getElementById('firstName');
     const lastNameInput = document.getElementById('lastName');
@@ -1467,7 +1467,7 @@ h1 span{
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#000000';
       ctx.font = `900 ${NUMBER_SIZE}px Inter, Arial, sans-serif`;
-      ctx.fillText(`${NUMBER_PREFIX} ${formatted}`, NUMBER_X, NUMBER_Y);
+      ctx.fillText(formatted, NUMBER_X, NUMBER_Y);
 
       return canvas;
     }
