@@ -944,7 +944,147 @@ h1 span{
       transform:translateY(0);
       filter:blur(0);
     }
+/* =========================================================
+   LOADER CIRCULAR PARA GENERAR PDF
+   ========================================================= */
 
+.pdf-loader-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(17,23,53,.42);
+  backdrop-filter:blur(14px);
+}
+
+.pdf-loader-overlay.show{
+  display:flex;
+}
+
+.pdf-loader-card{
+  width:min(92vw, 360px);
+  padding:30px 26px;
+  border-radius:32px;
+  background:linear-gradient(180deg,#ffffff 0%,#faf7ff 100%);
+  border:1px solid rgba(226,214,255,.88);
+  box-shadow:0 30px 80px rgba(17,23,53,.28);
+  text-align:center;
+  animation:pdfLoaderIn .35s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.pdf-loader-ring{
+  --pdf-progress:0deg;
+  width:150px;
+  height:150px;
+  border-radius:999px;
+  margin:0 auto;
+  display:grid;
+  place-items:center;
+  background:
+    conic-gradient(var(--purple) var(--pdf-progress), #eee9f8 0deg);
+  position:relative;
+  box-shadow:
+    0 18px 36px rgba(110,92,165,.18),
+    inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+.pdf-loader-ring::before{
+  content:"";
+  position:absolute;
+  width:106px;
+  height:106px;
+  border-radius:999px;
+  background:#ffffff;
+  box-shadow:inset 0 0 0 1px rgba(226,214,255,.9);
+}
+
+.pdf-loader-percent{
+  position:relative;
+  z-index:2;
+  color:var(--purple);
+  font-size:2rem;
+  font-weight:900;
+  letter-spacing:-.06em;
+}
+
+.pdf-loader-title{
+  margin-top:20px;
+  color:var(--text);
+  font-size:1.15rem;
+  font-weight:900;
+  letter-spacing:-.04em;
+}
+
+.pdf-loader-detail{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:.90rem;
+  line-height:1.45;
+  font-weight:700;
+}
+
+.pdf-loader-bar{
+  width:100%;
+  height:8px;
+  margin-top:20px;
+  border-radius:999px;
+  background:#eee9f8;
+  overflow:hidden;
+}
+
+.pdf-loader-bar-fill{
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--purple),var(--orange));
+  transition:width .35s ease;
+}
+
+@keyframes pdfLoaderIn{
+  from{
+    opacity:0;
+    transform:translateY(18px) scale(.96);
+    filter:blur(5px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    filter:blur(0);
+  }
+}
+
+@media (max-width:430px){
+  .pdf-loader-card{
+    width:min(94vw, 330px);
+    padding:26px 22px;
+    border-radius:28px;
+  }
+
+  .pdf-loader-ring{
+    width:132px;
+    height:132px;
+  }
+
+  .pdf-loader-ring::before{
+    width:94px;
+    height:94px;
+  }
+
+  .pdf-loader-percent{
+    font-size:1.72rem;
+  }
+
+  .pdf-loader-title{
+    font-size:1.02rem;
+  }
+
+  .pdf-loader-detail{
+    font-size:.84rem;
+  }
+}
     @keyframes fadeUp{
       from{opacity:0;transform:translateY(24px);filter:blur(6px)}
       to{opacity:1;transform:translateY(0);filter:blur(0)}
@@ -1181,6 +1321,27 @@ h1 span{
 </head>
 
 <body>
+
+  <div class="pdf-loader-overlay" id="pdfLoaderOverlay">
+    <div class="pdf-loader-card">
+      <div class="pdf-loader-ring" id="pdfLoaderRing">
+        <div class="pdf-loader-percent" id="pdfLoaderPercent">0%</div>
+      </div>
+
+      <div class="pdf-loader-title" id="pdfLoaderTitle">
+        Generando tus tickets
+      </div>
+
+      <div class="pdf-loader-detail" id="pdfLoaderDetail">
+        Estamos preparando tu PDF. No cierres esta ventana.
+      </div>
+
+      <div class="pdf-loader-bar">
+        <div class="pdf-loader-bar-fill" id="pdfLoaderBarFill"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="wrap">
     <aside class="panel">
       <div class="event-header reveal">
@@ -1408,6 +1569,14 @@ const NUMBER_SIZE = 120;
     const selectedTotal = document.getElementById('selectedTotal');
     const pickedList = document.getElementById('pickedList');
     const statusBox = document.getElementById('statusBox');
+const pdfLoaderOverlay = document.getElementById('pdfLoaderOverlay');
+const pdfLoaderRing = document.getElementById('pdfLoaderRing');
+const pdfLoaderPercent = document.getElementById('pdfLoaderPercent');
+const pdfLoaderTitle = document.getElementById('pdfLoaderTitle');
+const pdfLoaderDetail = document.getElementById('pdfLoaderDetail');
+const pdfLoaderBarFill = document.getElementById('pdfLoaderBarFill');
+
+let currentPdfProgress = 0;
 const progressRing = document.getElementById('progressRing');
 const progressPercent = document.getElementById('progressPercent');
 const progressTitle = document.getElementById('progressTitle');
@@ -1424,7 +1593,55 @@ let currentProgressPercent = 0;
     function setStatus(html) {
       statusBox.innerHTML = html;
     }
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
+function showPdfLoader(title = 'Generando tus tickets', detail = 'Estamos preparando tu PDF. No cierres esta ventana.') {
+  currentPdfProgress = 0;
+
+  pdfLoaderTitle.textContent = title;
+  pdfLoaderDetail.textContent = detail;
+  pdfLoaderPercent.textContent = '0%';
+  pdfLoaderRing.style.setProperty('--pdf-progress', '0deg');
+  pdfLoaderBarFill.style.width = '0%';
+
+  pdfLoaderOverlay.classList.add('show');
+}
+
+function hidePdfLoader() {
+  pdfLoaderOverlay.classList.remove('show');
+}
+
+function setPdfProgress(targetPercent, detailText) {
+  const start = currentPdfProgress;
+  const end = Math.max(0, Math.min(100, targetPercent));
+  const duration = 420;
+  const startTime = performance.now();
+
+  if (detailText) {
+    pdfLoaderDetail.textContent = detailText;
+  }
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = start + (end - start) * eased;
+
+    currentPdfProgress = value;
+
+    pdfLoaderRing.style.setProperty('--pdf-progress', `${value * 3.6}deg`);
+    pdfLoaderPercent.textContent = `${Math.round(value)}%`;
+    pdfLoaderBarFill.style.width = `${value}%`;
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
     function formatNumber(n) {
       return String(n).padStart(3, '0');
     }
@@ -1574,6 +1791,7 @@ updateProgressStats();
           Los boletos morados ya están reservados o bloqueados.
         `);
       } catch (error) {
+hidePdfLoader();
         setStatus(`
           <strong>Error al actualizar disponibilidad:</strong><br>
           ${error.message}
@@ -1644,12 +1862,20 @@ updateProgressStats();
 
       confirmBtn.disabled = true;
       reloadBtn.disabled = true;
+showPdfLoader(
+  'Generando tus tickets',
+  'Validando tus datos y preparando la reserva...'
+);
+
+setPdfProgress(8, 'Validando tus datos...');
+await wait(250);
 
       try {
         if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('PEGA_AQUI')) {
           throw new Error('Falta pegar la URL del Google Apps Script.');
         }
-
+setPdfProgress(18, 'Preparando información de tus boletos...');
+await wait(250);
         const payload = {
           action: 'reserve',
           eventName: 'Rifa Festival de los Glaciares 2026',
@@ -1668,7 +1894,8 @@ yapeHolder: '',
           drawTime: '15:00',
           createdAt: new Date().toISOString()
         };
-
+setPdfProgress(32, 'Conectando con la planilla de inscritos...');
+await wait(250);
         const response = await fetch(GOOGLE_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1691,13 +1918,16 @@ yapeHolder: '',
         if (!data.ok) {
           throw new Error(data.error || 'No se pudieron reservar los boletos.');
         }
+setPdfProgress(52, 'Reserva confirmada. Preparando el PDF...');
+await wait(300);
 
         numbers.forEach(n => reservedNumbers.add(n));
 selectedNumbers.clear();
 refreshGridState();
 updateSummary();
 updateProgressStats();
-
+setPdfProgress(64, 'Creando documento PDF...');
+await wait(250);
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: 'portrait',
@@ -1706,6 +1936,9 @@ updateProgressStats();
         });
 
         for (let i = 0; i < numbers.length; i++) {
+const pdfProgress = 64 + Math.round(((i + 1) / numbers.length) * 26);
+setPdfProgress(pdfProgress, `Generando ticket ${i + 1} de ${numbers.length}...`);
+await wait(180);
           const ticketCanvas = drawTicketCanvas(numbers[i]);
           const imgData = ticketCanvas.toDataURL('image/jpeg', 1.0);
 
@@ -1734,21 +1967,30 @@ updateProgressStats();
 
         const fileSeed = numbers[0] ? formatNumber(numbers[0]) : '000';
         const baseName = `${slugify(firstName)}-${slugify(lastName)}-${fileSeed}`;
-        pdf.save(`rifa-festival-glaciares-${baseName}.pdf`);
+setPdfProgress(96, 'Preparando la descarga...');
+await wait(300);
 
-       setStatus(`
+pdf.save(`rifa-festival-glaciares-${baseName}.pdf`);
+
+setPdfProgress(100, 'PDF listo. Iniciando descarga...');
+await wait(700);
+hidePdfLoader();
+
+       await fetchReservedNumbers();
+
+setStatus(`
   <strong>Tickets generados correctamente.</strong><br>
   Realiza el pago por Yape al <strong>902 306 145</strong> y envía tu captura por WhatsApp.
 `);
-
-        await fetchReservedNumbers();
       } catch (error) {
-        setStatus(`
-          <strong>Ocurrió un problema:</strong><br>
-          ${error.message}
-        `);
-        alert(`Ocurrió un problema: ${error.message}`);
-      } finally {
+  hidePdfLoader();
+
+  setStatus(`
+    <strong>Ocurrió un problema:</strong><br>
+    ${error.message}
+  `);
+  alert(`Ocurrió un problema: ${error.message}`);
+} finally {
         reloadBtn.disabled = false;
         confirmBtn.disabled = false;
         updateSummary();
