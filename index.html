@@ -369,7 +369,109 @@ h1 span{
       font-weight:900;
       word-break:break-word;
     }
+.progress-card{
+  margin-top:18px;
+  padding:18px;
+  border-radius:24px;
+  background:linear-gradient(180deg,#ffffff 0%,#faf7ff 100%);
+  border:1px solid rgba(226,214,255,.78);
+  box-shadow:var(--shadow-soft);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+}
 
+.progress-ring{
+  --progress:0deg;
+  width:112px;
+  height:112px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:
+    conic-gradient(var(--purple) var(--progress), #eee9f8 0deg);
+  position:relative;
+  box-shadow:
+    0 16px 30px rgba(110,92,165,.12),
+    inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+.progress-ring::before{
+  content:"";
+  position:absolute;
+  width:78px;
+  height:78px;
+  border-radius:999px;
+  background:#ffffff;
+  box-shadow:inset 0 0 0 1px rgba(226,214,255,.80);
+}
+
+.progress-percent{
+  position:relative;
+  z-index:2;
+  color:var(--purple);
+  font-size:1.25rem;
+  font-weight:900;
+  letter-spacing:-.04em;
+}
+
+.progress-info{
+  min-width:0;
+}
+
+.progress-label{
+  color:var(--purple);
+  font-size:.78rem;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.progress-title{
+  margin-top:4px;
+  color:var(--text);
+  font-size:1.02rem;
+  font-weight:900;
+  letter-spacing:-.035em;
+}
+
+.progress-detail{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:.86rem;
+  font-weight:700;
+  line-height:1.35;
+}
+
+@media (max-width:430px){
+  .progress-card{
+    gap:14px;
+    padding:16px;
+  }
+
+  .progress-ring{
+    width:96px;
+    height:96px;
+  }
+
+  .progress-ring::before{
+    width:68px;
+    height:68px;
+  }
+
+  .progress-percent{
+    font-size:1.05rem;
+  }
+
+  .progress-title{
+    font-size:.94rem;
+  }
+
+  .progress-detail{
+    font-size:.78rem;
+  }
+}
     .summary-note{
       margin-top:10px;
       color:var(--muted);
@@ -1126,6 +1228,17 @@ h1 span{
   Total: S/ <span id="selectedTotal">0.00</span>
   <div class="picked-list" id="pickedList">Aún no elegiste boletos.</div>
 </div>
+<div class="progress-card reveal">
+  <div class="progress-ring" id="progressRing">
+    <div class="progress-percent" id="progressPercent">0%</div>
+  </div>
+
+  <div class="progress-info">
+    <div class="progress-label">Avance de la rifa</div>
+    <div class="progress-title" id="progressTitle">0 de 350 tickets reservados</div>
+    <div class="progress-detail" id="progressDetail">Disponibilidad actualizada en tiempo real.</div>
+  </div>
+</div>
 
 <div class="actions reveal">
         <button class="primary" id="confirmBtn" disabled>Descargar tickets en PDF</button>
@@ -1295,6 +1408,12 @@ const NUMBER_SIZE = 120;
     const selectedTotal = document.getElementById('selectedTotal');
     const pickedList = document.getElementById('pickedList');
     const statusBox = document.getElementById('statusBox');
+const progressRing = document.getElementById('progressRing');
+const progressPercent = document.getElementById('progressPercent');
+const progressTitle = document.getElementById('progressTitle');
+const progressDetail = document.getElementById('progressDetail');
+
+let currentProgressPercent = 0;
 
     let reservedNumbers = new Set();
     let selectedNumbers = new Set();
@@ -1313,7 +1432,41 @@ const NUMBER_SIZE = 120;
     function normalizePersonText(text) {
       return text.trim().replace(/\s+/g, ' ');
     }
+function animateProgressCircle(targetPercent) {
+  const start = currentProgressPercent;
+  const end = Math.max(0, Math.min(100, targetPercent));
+  const duration = 900;
+  const startTime = performance.now();
 
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = start + (end - start) * eased;
+
+    currentProgressPercent = value;
+
+    progressRing.style.setProperty('--progress', `${value * 3.6}deg`);
+    progressPercent.textContent = `${Math.round(value)}%`;
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+function updateProgressStats() {
+  const reservedCount = reservedNumbers.size;
+  const percent = (reservedCount / TOTAL_TICKETS) * 100;
+  const availableCount = TOTAL_TICKETS - reservedCount;
+
+  progressTitle.textContent = `${reservedCount} de ${TOTAL_TICKETS} tickets reservados`;
+  progressDetail.textContent = `${availableCount} tickets disponibles.`;
+
+  animateProgressCircle(percent);
+}
     function updateSummary() {
       const nums = [...selectedNumbers].sort((a, b) => a - b);
       selectedCount.textContent = nums.length;
@@ -1375,6 +1528,7 @@ const NUMBER_SIZE = 120;
 
       refreshGridState();
       updateSummary();
+updateProgressStats();
     }
 
     async function fetchReservedNumbers() {
@@ -1412,7 +1566,8 @@ const NUMBER_SIZE = 120;
         selectedNumbers = new Set([...selectedNumbers].filter(n => !reservedNumbers.has(n)));
 
         refreshGridState();
-        updateSummary();
+updateSummary();
+updateProgressStats();
 
         setStatus(`
           <strong>Disponibilidad actualizada.</strong><br>
@@ -1538,9 +1693,10 @@ yapeHolder: '',
         }
 
         numbers.forEach(n => reservedNumbers.add(n));
-        selectedNumbers.clear();
-        refreshGridState();
-        updateSummary();
+selectedNumbers.clear();
+refreshGridState();
+updateSummary();
+updateProgressStats();
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
